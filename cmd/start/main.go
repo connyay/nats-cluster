@@ -57,6 +57,9 @@ type FlyEnv struct {
 	GatewayRegions []string
 	ServerName     string
 	Timestamp      time.Time
+	StoreDir       string
+	MaxFileStore   string
+	MaxMemoryStore string
 }
 
 //go:embed nats.conf.tmpl
@@ -118,6 +121,7 @@ func watchNatsConfig(vars FlyEnv) {
 func natsConfigVars() (FlyEnv, error) {
 	host := "fly-local-6pn"
 	appName := os.Getenv("FLY_APP_NAME")
+	storeDir := os.Getenv("NATS_STORE_DIR")
 
 	var regions []string
 	var err error
@@ -129,6 +133,10 @@ func natsConfigVars() (FlyEnv, error) {
 		host = "localhost"
 		appName = "local"
 		regions = []string{"local"}
+	}
+
+	if storeDir == "" {
+		storeDir = "/nats-store"
 	}
 
 	// easier to compare
@@ -146,6 +154,9 @@ func natsConfigVars() (FlyEnv, error) {
 		Host:           host,
 		ServerName:     os.Getenv("FLY_ALLOC_ID"),
 		Timestamp:      time.Now(),
+		StoreDir:       storeDir,
+		MaxFileStore:   os.Getenv("NATS_MAX_FILE_STORE"),
+		MaxMemoryStore: os.Getenv("NATS_MAX_MEMORY_STORE"),
 	}
 	if err != nil {
 		return FlyEnv{}, err

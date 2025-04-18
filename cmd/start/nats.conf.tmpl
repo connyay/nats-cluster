@@ -21,3 +21,12 @@ gateway: {
     ]
 }
 reconnect_error_reports: 1
+jetstream {
+    store_dir: "{{.StoreDir}}"
+    {{if .MaxFileStore}}
+    max_file_store: {{.MaxFileStore}}
+    {{end}}
+    {{if .MaxMemoryStore}}
+    max_memory_store: "{{.MaxMemoryStore}}"
+    {{end}}
+}
