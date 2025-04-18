@@ -28,7 +28,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: fly-examples/nats-cluster # list of Docker images to use as base name for tags
+          images: jeffh/nats-cluster # list of Docker images to use as base name for tags
           tag-sha: true # add git short SHA as Docker tag
       -
         name: Build and push
