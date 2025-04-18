@@ -9,7 +9,7 @@ RUN mkdir -p /metrics/
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
         ARCH="arm64"; \
     elif [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-        ARCH="amd64"; \
+        ARCH="x86_64"; \
     else \
         echo "Unsupported platform: $TARGETPLATFORM"; \
         exit 1; \
