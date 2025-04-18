@@ -1,4 +1,4 @@
-module github.com/fly-apps/nats-cluster
+module github.com/jeffh/nats-cluster
 
 go 1.24
 

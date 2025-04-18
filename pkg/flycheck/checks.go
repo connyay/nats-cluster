@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	suite "github.com/fly-apps/nats-cluster/pkg/check"
+	suite "github.com/jeffh/nats-cluster/pkg/check"
 )
 
 const Port = 5500

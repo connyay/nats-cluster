@@ -10,8 +10,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/fly-apps/nats-cluster/pkg/privnet"
-	"github.com/fly-apps/nats-cluster/pkg/supervisor"
+	"github.com/jeffh/nats-cluster/pkg/privnet"
+	"github.com/jeffh/nats-cluster/pkg/supervisor"
 
 	_ "embed"
 )
@@ -72,7 +72,7 @@ func watchNatsConfig(vars FlyEnv) {
 
 	go func() {
 		for {
-			for _ = range ticker.C {
+			for range ticker.C {
 				newVars, err := natsConfigVars()
 
 				if err != nil {
