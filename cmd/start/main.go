@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"sort"
@@ -51,15 +53,28 @@ func main() {
 }
 
 type FlyEnv struct {
-	Host           string
-	AppName        string
-	Region         string
-	GatewayRegions []string
-	ServerName     string
-	Timestamp      time.Time
-	StoreDir       string
-	MaxFileStore   string
-	MaxMemoryStore string
+	Host                string
+	AppName             string
+	Region              string
+	GatewayRegions      []string
+	ServerName          string
+	Timestamp           time.Time
+	StoreDir            string
+	MaxFileStore        string
+	MaxMemoryStore      string
+	encodedAppendConfig string // base64 encoded, use AppendConfig() to get the decoded value
+}
+
+func (e FlyEnv) AppendConfig() string {
+	if e.encodedAppendConfig != "" {
+		b, err := base64.StdEncoding.DecodeString(e.encodedAppendConfig)
+		if err != nil {
+			log.Printf("error base64 decoding NATS_APPEND_CONFIG: %v", err)
+			return fmt.Sprintf("// error decoding NATS_APPEND_CONFIG: %q", err.Error())
+		}
+		return string(b)
+	}
+	return ""
 }
 
 //go:embed nats.conf.tmpl
@@ -122,12 +137,16 @@ func natsConfigVars() (FlyEnv, error) {
 	host := "fly-local-6pn"
 	appName := os.Getenv("FLY_APP_NAME")
 	storeDir := os.Getenv("NATS_STORE_DIR")
+	encodedAppendConfig := os.Getenv("NATS_APPEND_CONFIG")
 
 	var regions []string
 	var err error
 
 	if appName != "" {
 		regions, err = privnet.GetRegions(context.Background(), appName)
+		if err != nil {
+			return FlyEnv{}, fmt.Errorf("error getting regions for app %s: %w", appName, err)
+		}
 	} else {
 		// defaults for local exec
 		host = "localhost"
@@ -148,15 +167,16 @@ func natsConfigVars() (FlyEnv, error) {
 	}
 
 	vars := FlyEnv{
-		AppName:        appName,
-		Region:         region,
-		GatewayRegions: regions,
-		Host:           host,
-		ServerName:     os.Getenv("FLY_ALLOC_ID"),
-		Timestamp:      time.Now(),
-		StoreDir:       storeDir,
-		MaxFileStore:   os.Getenv("NATS_MAX_FILE_STORE"),
-		MaxMemoryStore: os.Getenv("NATS_MAX_MEMORY_STORE"),
+		AppName:             appName,
+		Region:              region,
+		GatewayRegions:      regions,
+		Host:                host,
+		ServerName:          os.Getenv("FLY_ALLOC_ID"),
+		Timestamp:           time.Now(),
+		StoreDir:            storeDir,
+		MaxFileStore:        os.Getenv("NATS_MAX_FILE_STORE"),
+		MaxMemoryStore:      os.Getenv("NATS_MAX_MEMORY_STORE"),
+		encodedAppendConfig: encodedAppendConfig,
 	}
 	if err != nil {
 		return FlyEnv{}, err
