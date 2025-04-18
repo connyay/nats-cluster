@@ -28,7 +28,7 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o /fly/bin/start ./cmd/start
+RUN --mount=type=cache,target=/go/pkg/mod  CGO_ENABLED=0 GOOS=linux go build -v -o /fly/bin/start ./cmd/start
 
 # stage: final image
 FROM nats:2.11-scratch AS nats-server
