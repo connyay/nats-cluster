@@ -31,15 +31,20 @@ This example creates a federated mesh of NATS servers that communicate over the 
     type = "http"
 ```
 
-2. `fly deploy`
+3. `fly deploy`
 
     > This will start NATS with a single node in your selected region. This should fail
 
-3. `fly scale count 3`
+4. Add more regions with `flyctl scale count 1 --region sfc`
 
-    > This will scale the cluster to 3 nodes within the same region.
+    > This will add a node in the `sfc` region. You can add as many regions as you like
 
-3. Add more regions with `flyctl scale count 3 --region sfc` or
+
+You can optionally scale by region after you have at least one machine in each region. For example, if you want to scale the cluster to 3 nodes in each region, you can run:
+
+`fly scale count 3 --max-per-region 1`
+
+This will scale the cluster to 3 nodes with a max of 1 node per region. You can adjust the `--max-per-region` flag to control how many nodes you want in each region.
 
 Then run `flyctl logs` and you'll see the virtual machines discover each other.
 
