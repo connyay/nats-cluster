@@ -14,7 +14,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
         echo "Unsupported platform: $TARGETPLATFORM"; \
         exit 1; \
     fi; \
-    curl -o nats-exporter.tar.gz -L https://github.com/nats-io/prometheus-nats-exporter/releases/download/${PROMETHEUS_NATS_VERSION}/prometheus-nats-exporter-${PROMETHEUS_NATS_VERSION}-linux-$ARCH.tar.gz
+    echo "Download https://github.com/nats-io/prometheus-nats-exporter/releases/download/${PROMETHEUS_NATS_VERSION}/prometheus-nats-exporter-${PROMETHEUS_NATS_VERSION}-linux-${ARCH}.tar.gz"; \
+    curl -o nats-exporter.tar.gz -L "https://github.com/nats-io/prometheus-nats-exporter/releases/download/${PROMETHEUS_NATS_VERSION}/prometheus-nats-exporter-${PROMETHEUS_NATS_VERSION}-linux-${ARCH}.tar.gz"
 RUN tar zxvf nats-exporter.tar.gz
 
 ### stage: build flyutil
