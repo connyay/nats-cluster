@@ -2,7 +2,7 @@ package util
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"os"
 )
 
@@ -32,8 +32,8 @@ func WriteOutput(message, data string) {
 func sendToStdout(resp *Response) {
 	e, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err.Error())
+		slog.Error("failed to marshal response", "error", err)
 	}
-	fmt.Println(string(e))
+	slog.Info(string(e))
 	os.Exit(0)
 }

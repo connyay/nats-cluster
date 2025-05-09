@@ -3,7 +3,7 @@ package check
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -90,14 +90,19 @@ func (h *CheckSuite) RawResult() string {
 func (h *CheckSuite) Print() {
 	if h.processed {
 		for _, check := range h.Checks {
-			fmt.Println(check.Result())
+			slog.Info(check.Result())
 		}
-		fmt.Printf("Total execution time of %q checks: %s\n", h.Name, h.executionTime)
+		slog.Info("Check suite completed",
+			"suite", h.Name,
+			"execution_time", h.executionTime)
 	} else {
 		if len(h.Checks) > 0 {
-			fmt.Printf("%q hasn't been processed. %d check(s) pending evaluation.\n", h.Name, len(h.Checks))
+			slog.Info("Check suite not processed",
+				"suite", h.Name,
+				"pending_checks", len(h.Checks))
 		} else {
-			fmt.Printf("%q has no checks to evaluate.\n", h.Name)
+			slog.Info("Check suite has no checks to evaluate",
+				"suite", h.Name)
 		}
 	}
 }

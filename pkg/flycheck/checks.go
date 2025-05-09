@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -15,7 +16,7 @@ const Port = 5500
 func StartCheckListener() {
 	http.HandleFunc("/flycheck/vm", runVMChecks)
 
-	fmt.Printf("Listening on port %d", Port)
+	slog.Info("Starting health check listener", "port", Port)
 	http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
 }
 

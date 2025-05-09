@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"sort"
@@ -21,7 +21,7 @@ import (
 func main() {
 	natsVars, err := initNatsConfig()
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("failed to initialize NATS config", "error", err)
 		os.Exit(1)
 	}
 
@@ -47,7 +47,7 @@ func main() {
 
 	err = svisor.Run()
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("supervisor failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -69,7 +69,7 @@ func (e FlyEnv) AppendConfig() string {
 	if e.encodedAppendConfig != "" {
 		b, err := base64.StdEncoding.DecodeString(e.encodedAppendConfig)
 		if err != nil {
-			log.Printf("error base64 decoding NATS_APPEND_CONFIG: %v", err)
+			slog.Error("error base64 decoding NATS_APPEND_CONFIG", "error", err)
 			return fmt.Sprintf("// error decoding NATS_APPEND_CONFIG: %q", err.Error())
 		}
 		return string(b)
@@ -81,7 +81,7 @@ func (e FlyEnv) AppendConfig() string {
 var tmplRaw string
 
 func watchNatsConfig(vars FlyEnv) {
-	fmt.Println("Starting ticker")
+	slog.Info("Starting ticker")
 	ticker := time.NewTicker(5 * time.Second)
 	var lastReload time.Time
 
@@ -91,24 +91,24 @@ func watchNatsConfig(vars FlyEnv) {
 				newVars, err := natsConfigVars()
 
 				if err != nil {
-					fmt.Println("error getting nats config vars:", err)
+					slog.Error("error getting nats config vars", "error", err)
 					continue
 				}
 				if stringSlicesEqual(vars.GatewayRegions, newVars.GatewayRegions) {
 					// noop, nothing changed
-					//fmt.Println("No change in regions")
+					// slog.Debug("No change in regions")
 					continue
 				}
 
 				cooloff := lastReload.Add(15 * time.Second)
 				if time.Now().Before(cooloff) {
-					fmt.Println("Regions changed, but cooloff period not expired")
+					slog.Info("Regions changed, but cooloff period not expired")
 					continue
 				}
 
 				err = writeNatsConfig(newVars)
 				if err != nil {
-					fmt.Println("error writing nats config:", err)
+					slog.Error("error writing nats config", "error", err)
 				}
 
 				cmd := exec.Command(
@@ -116,13 +116,15 @@ func watchNatsConfig(vars FlyEnv) {
 					"--signal",
 					"stop=/var/run/nats-server.pid",
 				)
-				fmt.Printf("Reloading nats: \n\t%v\n\t%v\n", vars.GatewayRegions, newVars.GatewayRegions)
+				slog.Info("Reloading nats",
+					"old_regions", vars.GatewayRegions,
+					"new_regions", newVars.GatewayRegions)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 
 				err = cmd.Run()
 				if err != nil {
-					fmt.Println("Command finished with error:", err)
+					slog.Error("Command finished with error", "error", err)
 				}
 				vars = newVars
 				lastReload = time.Now()
@@ -130,7 +132,7 @@ func watchNatsConfig(vars FlyEnv) {
 		}
 	}()
 
-	fmt.Println("ticker fn return")
+	slog.Info("ticker fn return")
 }
 
 func natsConfigVars() (FlyEnv, error) {
