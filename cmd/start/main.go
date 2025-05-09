@@ -91,7 +91,7 @@ func watchNatsConfig(vars FlyEnv) {
 				newVars, err := natsConfigVars()
 
 				if err != nil {
-					fmt.Printf("error getting nats config vars: %v", err)
+					fmt.Println("error getting nats config vars:", err)
 					continue
 				}
 				if stringSlicesEqual(vars.GatewayRegions, newVars.GatewayRegions) {
@@ -108,7 +108,7 @@ func watchNatsConfig(vars FlyEnv) {
 
 				err = writeNatsConfig(newVars)
 				if err != nil {
-					fmt.Printf("error writing nats config: %v", err)
+					fmt.Println("error writing nats config:", err)
 				}
 
 				cmd := exec.Command(
@@ -122,7 +122,7 @@ func watchNatsConfig(vars FlyEnv) {
 
 				err = cmd.Run()
 				if err != nil {
-					fmt.Printf("Command finished with error: %v", err)
+					fmt.Println("Command finished with error:", err)
 				}
 				vars = newVars
 				lastReload = time.Now()
