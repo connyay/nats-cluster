@@ -1,4 +1,4 @@
-module github.com/jeffh/nats-cluster
+module github.com/connyay/nats-cluster
 
 go 1.24
 

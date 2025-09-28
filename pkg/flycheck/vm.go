@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jeffh/nats-cluster/pkg/check"
-	chk "github.com/jeffh/nats-cluster/pkg/check"
+	"github.com/connyay/nats-cluster/pkg/check"
+	chk "github.com/connyay/nats-cluster/pkg/check"
 )
 
 // CheckVM for system / disk checks

@@ -12,8 +12,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/jeffh/nats-cluster/pkg/privnet"
-	"github.com/jeffh/nats-cluster/pkg/supervisor"
+	"github.com/connyay/nats-cluster/pkg/privnet"
+	"github.com/connyay/nats-cluster/pkg/supervisor"
 
 	_ "embed"
 )

@@ -11,7 +11,7 @@ This example creates a federated mesh of NATS servers that communicate over the 
 
 ```toml
 [build]
-  image = "jeffh/nats-cluster:main"
+  image = "connyay/nats-cluster:main"
 
 [mounts]
   source = "nats_cluster__data"

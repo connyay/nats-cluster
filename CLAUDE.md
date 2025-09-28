@@ -38,7 +38,7 @@ The application sets up NATS servers that can discover and connect to each other
 go build -o start ./cmd/start
 
 # Build the Docker image
-docker build -t jeffh/nats-cluster .
+docker build -t connyay/nats-cluster .
 
 # Run tests
 go test ./...

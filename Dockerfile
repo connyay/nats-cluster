@@ -22,7 +22,7 @@ RUN tar zxvf nats-exporter.tar.gz
 FROM golang:1 AS flyutil
 ARG VERSION
 
-WORKDIR /go/src/github.com/jeffh/nats-cluster
+WORKDIR /go/src/github.com/connyay/nats-cluster
 COPY go.mod ./
 COPY go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download

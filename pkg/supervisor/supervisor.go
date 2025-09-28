@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"github.com/jeffh/nats-cluster/pkg/flycheck"
+	"github.com/connyay/nats-cluster/pkg/flycheck"
 	"golang.org/x/sync/errgroup"
 )
 
