@@ -1,3 +1,6 @@
 fly.toml
+fly.test.*.toml
+start
+test/e2e/e2e
 
 **/.claude/settings.local.json

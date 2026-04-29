@@ -1,0 +1,22 @@
+app = "{{.AppName}}"
+primary_region = "{{.PrimaryRegion}}"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NATS_STORE_DIR = "/tmp/nats-store"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "15s"
+    timeout = "5s"
+    method = "get"
+    path = "/healthz"
+    port = 8222
+    type = "http"
