@@ -227,4 +227,3 @@ func writeNatsConfig(vars FlyEnv) error {
 	}
 	return os.Rename(tmp, dest)
 }
-
