@@ -237,6 +237,34 @@ func waitForStreamLeader(ctx context.Context, js nats.JetStreamContext, name str
 	}
 }
 
+// waitForConsumerLeader polls ConsumerInfo on the subscription's consumer until
+// it reports a RAFT leader. Mirrors waitForStreamLeader: PullSubscribe returns
+// as soon as the consumer is created in meta, but its RAFT group may still be
+// electing — Fetch before then yields "no responders available for request".
+func waitForConsumerLeader(ctx context.Context, sub *nats.Subscription, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for {
+		info, err := sub.ConsumerInfo()
+		if err == nil {
+			if info.Cluster == nil || info.Cluster.Leader != "" {
+				return nil
+			}
+			lastErr = fmt.Errorf("no leader yet (replicas=%d)", len(info.Cluster.Replicas)+1)
+		} else {
+			lastErr = err
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("consumer leader not elected within %s: %w", timeout, lastErr)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
 func assertJetStream(ctx context.Context, url string, nodes int) error {
 	nc, err := natsConnect(ctx, url)
 	if err != nil {
@@ -284,6 +312,10 @@ func assertJetStream(ctx context.Context, url string, nodes int) error {
 		return fmt.Errorf("pull subscribe: %w", err)
 	}
 	defer sub.Unsubscribe()
+
+	if err := waitForConsumerLeader(ctx, sub, 30*time.Second); err != nil {
+		return err
+	}
 
 	received := 0
 	deadline := time.Now().Add(30 * time.Second)
