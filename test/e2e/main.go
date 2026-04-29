@@ -229,4 +229,3 @@ func dumpDiagnostics(app string) {
 	defer lc()
 	_ = flyRun(lctx, "logs", "--app", app)
 }
-

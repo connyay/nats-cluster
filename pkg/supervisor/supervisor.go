@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/shlex"
 	"github.com/connyay/nats-cluster/pkg/flycheck"
+	"github.com/google/shlex"
 	"golang.org/x/sync/errgroup"
 )
 
