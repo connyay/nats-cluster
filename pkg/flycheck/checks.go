@@ -3,6 +3,7 @@ package flycheck
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -21,20 +22,12 @@ func StartCheckListener() {
 }
 
 func runVMChecks(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), (5 * time.Second))
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	suite := &suite.CheckSuite{Name: "VM"}
-	suite = CheckVM(suite)
-
-	go func(ctx context.Context) {
-		suite.Process(ctx)
-		cancel()
-	}(ctx)
-
-	select {
-	case <-ctx.Done():
-		handleCheckResponse(w, suite, false)
-	}
+	s := &suite.CheckSuite{Name: "VM"}
+	s = CheckVM(s)
+	s.Process(ctx)
+	handleCheckResponse(w, s, false)
 }
 
 func handleCheckResponse(w http.ResponseWriter, suite *suite.CheckSuite, raw bool) {
@@ -49,7 +42,7 @@ func handleCheckResponse(w http.ResponseWriter, suite *suite.CheckSuite, raw boo
 		result = suite.Result()
 	}
 	if !suite.Passed() {
-		handleError(w, fmt.Errorf(result))
+		handleError(w, errors.New(result))
 		return
 	}
 	json.NewEncoder(w).Encode(result)

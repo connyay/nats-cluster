@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"os/signal"
+	"slices"
 	"sort"
 	"syscall"
 	"text/template"
@@ -39,7 +41,10 @@ func main() {
 		supervisor.WithRestart(0, 1*time.Second),
 	)
 
-	go watchNatsConfig(natsVars)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go watchNatsConfig(ctx, natsVars)
 
 	svisor.StopOnSignal(syscall.SIGINT, syscall.SIGTERM)
 
@@ -80,59 +85,58 @@ func (e FlyEnv) AppendConfig() string {
 //go:embed nats.conf.tmpl
 var tmplRaw string
 
-func watchNatsConfig(vars FlyEnv) {
+func watchNatsConfig(ctx context.Context, vars FlyEnv) {
 	slog.Info("Starting ticker")
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	var lastReload time.Time
 
-	go func() {
-		for {
-			for range ticker.C {
-				newVars, err := natsConfigVars()
-
-				if err != nil {
-					slog.Error("error getting nats config vars", "error", err)
-					continue
-				}
-				if stringSlicesEqual(vars.GatewayRegions, newVars.GatewayRegions) {
-					// noop, nothing changed
-					// slog.Debug("No change in regions")
-					continue
-				}
-
-				cooloff := lastReload.Add(15 * time.Second)
-				if time.Now().Before(cooloff) {
-					slog.Info("Regions changed, but cooloff period not expired")
-					continue
-				}
-
-				err = writeNatsConfig(newVars)
-				if err != nil {
-					slog.Error("error writing nats config", "error", err)
-				}
-
-				cmd := exec.Command(
-					"nats-server",
-					"--signal",
-					"stop=/var/run/nats-server.pid",
-				)
-				slog.Info("Reloading nats",
-					"old_regions", vars.GatewayRegions,
-					"new_regions", newVars.GatewayRegions)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-
-				err = cmd.Run()
-				if err != nil {
-					slog.Error("Command finished with error", "error", err)
-				}
-				vars = newVars
-				lastReload = time.Now()
-			}
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("ticker stopping")
+			return
+		case <-ticker.C:
 		}
-	}()
 
-	slog.Info("ticker fn return")
+		newVars, err := natsConfigVars()
+		if err != nil {
+			slog.Error("error getting nats config vars", "error", err)
+			continue
+		}
+		if slices.Equal(vars.GatewayRegions, newVars.GatewayRegions) {
+			continue
+		}
+
+		cooloff := lastReload.Add(15 * time.Second)
+		if time.Now().Before(cooloff) {
+			slog.Info("Regions changed, but cooloff period not expired")
+			continue
+		}
+
+		err = writeNatsConfig(newVars)
+		if err != nil {
+			slog.Error("error writing nats config", "error", err)
+		}
+
+		cmd := exec.CommandContext(ctx,
+			"nats-server",
+			"--signal",
+			"stop=/var/run/nats-server.pid",
+		)
+		slog.Info("Reloading nats",
+			"old_regions", vars.GatewayRegions,
+			"new_regions", newVars.GatewayRegions)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err = cmd.Run()
+		if err != nil {
+			slog.Error("Command finished with error", "error", err)
+		}
+		vars = newVars
+		lastReload = time.Now()
+	}
 }
 
 func natsConfigVars() (FlyEnv, error) {
@@ -221,14 +225,3 @@ func writeNatsConfig(vars FlyEnv) error {
 	return nil
 }
 
-func stringSlicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}

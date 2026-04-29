@@ -2,7 +2,6 @@ package check
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -23,24 +22,27 @@ func NewCheckSuite(name string) *CheckSuite {
 	return &CheckSuite{Name: name}
 }
 
-func (h *CheckSuite) Process(parentCtx context.Context) {
-	ctx, cancel := context.WithCancel(parentCtx)
+func (h *CheckSuite) Process(ctx context.Context) {
 	start := time.Now()
-	for _, check := range h.Checks {
-		check.Process()
-	}
-	h.executionTime = RoundDuration(time.Since(start), 2)
-	h.processed = true
-	h.runOnCompletion()
-	cancel()
+	defer func() {
+		h.executionTime = RoundDuration(time.Since(start), 2)
+		h.processed = true
+		h.runOnCompletion()
+	}()
 
-	select {
-	case <-ctx.Done():
-		// Handle timeout
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			h.executionTime = RoundDuration(time.Since(start), 2)
-			h.processed = true
-			h.runOnCompletion()
+	for _, check := range h.Checks {
+		if ctx.Err() != nil {
+			return
+		}
+		done := make(chan struct{})
+		go func(c *Check) {
+			c.Process()
+			close(done)
+		}(check)
+		select {
+		case <-done:
+		case <-ctx.Done():
+			return
 		}
 	}
 }

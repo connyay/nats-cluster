@@ -33,7 +33,7 @@ type Supervisor struct {
 
 func New(name string, timeout time.Duration) *Supervisor {
 	return &Supervisor{
-		timeout: 5 * time.Second,
+		timeout: timeout,
 		name:    name,
 		output:  &multiOutput{},
 	}
@@ -160,7 +160,7 @@ func (h *Supervisor) Stop() {
 }
 
 func (h *Supervisor) StopOnSignal(sigs ...os.Signal) {
-	sigch := make(chan os.Signal)
+	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, sigs...)
 
 	go func() {
