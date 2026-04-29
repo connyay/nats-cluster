@@ -181,7 +181,7 @@ func natsConfigVars() (FlyEnv, error) {
 		Timestamp:           time.Now(),
 		StoreDir:            storeDir,
 		MaxFileStore:        os.Getenv("NATS_MAX_FILE_STORE"),
-		MaxMemoryStore:      os.Getenv("NATS_MAX_MEMORY_STORE"),
+		MaxMemoryStore:      os.Getenv("NATS_MAX_MEM_STORE"),
 		encodedAppendConfig: encodedAppendConfig,
 	}
 	if err != nil {
@@ -204,24 +204,27 @@ func initNatsConfig() (FlyEnv, error) {
 }
 
 func writeNatsConfig(vars FlyEnv) error {
+	const dest = "/etc/nats.conf"
+
 	tmpl, err := template.New("conf").Parse(tmplRaw)
-
 	if err != nil {
 		return err
 	}
 
-	f, err := os.Create("/etc/nats.conf")
-
+	f, err := os.CreateTemp("/etc", "nats.conf.*.tmp")
 	if err != nil {
 		return err
 	}
+	tmp := f.Name()
+	defer os.Remove(tmp)
 
-	err = tmpl.Execute(f, vars)
-
-	if err != nil {
+	if err := tmpl.Execute(f, vars); err != nil {
+		f.Close()
 		return err
 	}
-
-	return nil
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dest)
 }
 

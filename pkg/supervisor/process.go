@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -19,11 +20,13 @@ type process struct {
 	restartDelay time.Duration
 	maxRestarts  int
 
-	f       cmdFactory
-	running bool
-	dir     string
-	env     []string
+	f   cmdFactory
+	dir string
+	env []string
+
+	mu      sync.Mutex
 	cmd     *exec.Cmd
+	running bool
 }
 
 type Opt func(*process)
@@ -67,7 +70,13 @@ func (p *process) writeErr(err error) {
 }
 
 func (p *process) signal(sig os.Signal) {
-	group, err := os.FindProcess(-p.cmd.Process.Pid)
+	p.mu.Lock()
+	cmd := p.cmd
+	p.mu.Unlock()
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+	group, err := os.FindProcess(-cmd.Process.Pid)
 	if err != nil {
 		p.writeErr(err)
 		return
@@ -79,26 +88,35 @@ func (p *process) signal(sig os.Signal) {
 }
 
 func (p *process) Running() bool {
-	return p.cmd != nil && p.cmd.Process != nil && p.cmd.ProcessState == nil
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.running && p.cmd != nil && p.cmd.Process != nil
 }
 
 func (p *process) Run() {
-	p.cmd = p.f()
+	cmd := p.f()
+	p.mu.Lock()
+	p.cmd = cmd
+	p.running = true
+	p.mu.Unlock()
 	defer func() {
+		p.mu.Lock()
 		p.cmd = nil
+		p.running = false
+		p.mu.Unlock()
 	}()
 
 	p.output.PipeOutput(p)
 	defer p.output.ClosePipe(p)
 
-	ensureKill(p.cmd)
+	ensureKill(cmd)
 
 	p.writeLine([]byte("\033[1mRunning...\033[0m"))
 
-	if err := p.cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil {
 		p.writeErr(err)
 	} else {
-		status := p.cmd.ProcessState.ExitCode()
+		status := cmd.ProcessState.ExitCode()
 		p.writeLine([]byte(fmt.Sprintf("\033[1mProcess exited %d\033[0m", status)))
 	}
 }
