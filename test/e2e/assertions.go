@@ -209,6 +209,34 @@ func assertPubSub(ctx context.Context, url string) error {
 	return nil
 }
 
+// waitForStreamLeader polls StreamInfo until the stream reports a RAFT leader
+// (or, for R=1, simply exists). AddStream returns once the stream is created
+// in meta, but the data-plane RAFT group may still be electing — publishing
+// before then yields "no response from stream".
+func waitForStreamLeader(ctx context.Context, js nats.JetStreamContext, name string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for {
+		info, err := js.StreamInfo(name)
+		if err == nil {
+			if info.Cluster == nil || info.Cluster.Leader != "" {
+				return nil
+			}
+			lastErr = fmt.Errorf("no leader yet (replicas=%d)", len(info.Cluster.Replicas)+1)
+		} else {
+			lastErr = err
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("stream %s leader not elected within %s: %w", name, timeout, lastErr)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
 func assertJetStream(ctx context.Context, url string, nodes int) error {
 	nc, err := natsConnect(ctx, url)
 	if err != nil {
@@ -216,7 +244,10 @@ func assertJetStream(ctx context.Context, url string, nodes int) error {
 	}
 	defer nc.Close()
 
-	js, err := nc.JetStream()
+	// MaxWait raises the per-request timeout for JS API calls (AddStream,
+	// Publish, etc). The default 5s is tight when traffic flows through the Fly
+	// proxy/WireGuard tunnel.
+	js, err := nc.JetStream(nats.MaxWait(10 * time.Second))
 	if err != nil {
 		return fmt.Errorf("jetstream context: %w", err)
 	}
@@ -231,6 +262,13 @@ func assertJetStream(ctx context.Context, url string, nodes int) error {
 		return fmt.Errorf("add stream R=%d: %w", replicas, err)
 	}
 	defer js.DeleteStream(streamName)
+
+	// Wait for the stream's RAFT leader to be elected before publishing.
+	// Without this, the first js.Publish can race ahead of leader election and
+	// time out with "no response from stream", especially for R>1 over the proxy.
+	if err := waitForStreamLeader(ctx, js, streamName, 30*time.Second); err != nil {
+		return err
+	}
 
 	const N = 50
 	for i := 0; i < N; i++ {
