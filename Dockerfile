@@ -1,6 +1,6 @@
 ### stage: get nats exporter
 FROM curlimages/curl:latest AS metrics
-ARG PROMETHEUS_NATS_VERSION=v0.17.2
+ARG PROMETHEUS_NATS_VERSION=v0.19.2
 ARG TARGETPLATFORM
 
 WORKDIR /metrics/
@@ -32,7 +32,7 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod  CGO_ENABLED=0 GOOS=linux go build -v -o /fly/bin/start ./cmd/start
 
 # stage: final image
-FROM nats:2.11-scratch AS nats-server
+FROM nats:2.12.8-scratch AS nats-server
 
 FROM debian:bookworm-slim
 
